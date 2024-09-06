@@ -1,0 +1,17 @@
+# @name createPollsApi
+POST http://localhost:3333/api/v1/polls HTTP/1.1
+Content-Type: application/json
+
+{
+  "title": "Test Poll",
+  "description": "This is a test poll",
+  "options": [
+    { "title": "Option 1" },
+    { "title": "Option 2" }
+  ]
+}
+
+###
+
+# @name getPollsApi
+GET http://localhost:3333/api/v1/polls HTTP/1.1
