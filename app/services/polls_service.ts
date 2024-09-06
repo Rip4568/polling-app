@@ -12,15 +12,27 @@ interface CreatePollData {
 }
 
 interface UpdatePollData {
-  title: string
-  description: string
-  banner: string
-  dateExpiration?: DateTime | null | undefined
-  dateBegin?: DateTime | null | undefined
+  title?: string
+  description?: string | null
+  banner?: string | null
+  dateExpiration?: DateTime | null
+  dateBegin?: DateTime | null
+  deviceIdOwner?: string
   options?: { title: string }[]
 }
 
 export default class PollsService {
+  /**
+   * Converte uma string, DateTime, null ou undefined para DateTime ou null.
+   *
+   * @param date - A data a ser convertida. Pode ser uma string ISO, um objeto DateTime, null ou undefined.
+   * @returns Um objeto DateTime se a conversão for bem-sucedida, ou null caso contrário.
+   */
+  private toDateTime(date: string | DateTime | null | undefined): DateTime | null {
+    if (date instanceof DateTime) return date
+    if (typeof date === 'string') return DateTime.fromISO(date)
+    return null
+  }
   public async all(): Promise<Poll[]> {
     return await Poll.all()
   }
