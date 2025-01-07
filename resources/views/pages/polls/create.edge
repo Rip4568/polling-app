@@ -1,6 +1,7 @@
 @layout.main({ title: "Create new Poll" })
     <main class="container mx-auto p-4 w-sm">
-      <form method="POST" class="shadow-md px-8 pt-6 pb-8 mb-4 bg-secondary-dark rounded flex flex-col" name="poll-form" action="">
+      <form method="POST" class="shadow-md px-8 pt-6 pb-8 mb-4 bg-secondary-dark rounded flex flex-col" name="poll-form" action="{{ route('polls.store') }}">
+
         {{ csrfField() }}
           {{--  <input type="file" name="banner" accept="image/*" class="rounded border-none px-4 py-2 bg-gray-600 mb-4" placeholder="asd">  --}}
           <input type="text" required value="TITULO QUALQUER AQUI" name="title" placeholder="Title Poll Here..." autocomplete="off" class="rounded border-none px-4 py-2 bg-gray-600 mb-4">
@@ -15,31 +16,63 @@
     
     async function createPoll(formHtml) {
       const formData = new FormData(formHtml);
-      const data = {
-        title: formData.get('title'),
-        description: formData.get('description'),
-        options: []
-      };
+  
+      // Clear previous error messages
+      const existingError = formHtml.querySelector('.error-message');
+      if (existingError) existingError.remove();
 
+      const options = [];
       for (let [key, value] of formData.entries()) {
         if (key.startsWith('options option-') && value.trim() !== '') {
-          data.options.push({ title: value.trim() });
+          options.push({ title: value.trim() });
         }
       }
 
-      const response = await fetch("/api/v1/polls/", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'accept': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
+      // Client-side validation
+      if (options.length < 2) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-500 text-white p-4 mb-4 rounded error-message';
+        errorDiv.textContent = 'At least 2 options are required';
+        formHtml.insertBefore(errorDiv, formHtml.firstChild);
+        return;
+      }
 
-      console.info(response);
-      return await response.json();
+      const data = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        deviceIdOwner: navigator.userAgent,
+        dateBegin: null,
+        dateExpiration: null,
+        options: options
+      };
+
+      try {
+        const response = await fetch("/api/v1/polls/", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('input[name="_csrf"]').value
+          },
+          body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+    
+        if (!response.ok) {
+          throw new Error(result.message || 'Failed to create poll');
+        }
+
+        // Success - redirect or show success message
+        window.location.href = '/polls'; // Redirect to polls list
+    
+      } catch (error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'bg-red-500 text-white p-4 mb-4 rounded error-message';
+        errorDiv.textContent = error.message;
+        formHtml.insertBefore(errorDiv, formHtml.firstChild);
+      }
     }
-
 
     function listnerForm(){
       const formHtml = document.querySelector('form');

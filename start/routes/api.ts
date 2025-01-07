@@ -15,7 +15,13 @@ router
   .group(() => {
     router
       .group(() => {
-        router.resource('polls', PollsApiController).as('polls')
+        router
+          .group(() => {
+            router.resource('', PollsApiController).as('polls')
+            router.post('/:id/vote/:optionId', PollsApiController)
+          })
+          .prefix('/polls')
+          .as('polls')
       })
       .prefix('/v1')
     router

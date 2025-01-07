@@ -7,7 +7,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 @inject()
 export default class PollsController {
-  public constructor(
+  constructor(
     private readonly pollsService: PollsService,
     private readonly imageService: ImageService
   ) {}
@@ -15,14 +15,14 @@ export default class PollsController {
   /**
    * Display welcome page
    */
-  public async welcome({ view }: HttpContext) {
+  async welcome({ view }: HttpContext) {
     return view.render('pages/welcome')
   }
 
   /**
    * Display a list of resource
    */
-  public async index({ view }: HttpContext) {
+  async index({ view }: HttpContext) {
     const polls = await this.pollsService.all()
     return view.render('pages/home', { polls })
   }
@@ -30,14 +30,14 @@ export default class PollsController {
   /**
    * Display form to create a new record
    */
-  public async create({ view }: HttpContext) {
+  async create({ view }: HttpContext) {
     return view.render('pages/polls/create')
   }
 
   /**
    * Handle form submission for the create action
    */
-  public async store({ response, request }: HttpContext) {
+  async store({ response, request }: HttpContext) {
     const validatedData = await request.validateUsing(createPollValidator)
 
     const poll = await this.pollsService.create(validatedData)
@@ -47,17 +47,17 @@ export default class PollsController {
   /**
    * Show individual record
    */
-  public async show({ params }: HttpContext) {}
+  async show({ params }: HttpContext) {}
 
   /**
    * Edit individual record
    */
-  public async edit({ params }: HttpContext) {}
+  async edit({ params }: HttpContext) {}
 
   /**
    * Handle form submission for the edit action
    */
-  public async update({ params, request, response }: HttpContext) {
+  async update({ params, request, response }: HttpContext) {
     const poll = await this.pollsService.find(params.poll_id)
     if (!poll) {
       return response.status(404).json({
@@ -77,5 +77,5 @@ export default class PollsController {
   /**
    * Delete record
    */
-  public async destroy({ params }: HttpContext) {}
+  async destroy({ params }: HttpContext) {}
 }

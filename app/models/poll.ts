@@ -1,6 +1,6 @@
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import { DateTime } from 'luxon'
-import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
+import { BaseModel, beforeCreate, column, hasMany } from '@adonisjs/lucid/orm'
 import Option from './option.js'
 
 export default class Poll extends BaseModel {
@@ -18,6 +18,9 @@ export default class Poll extends BaseModel {
 
   @column.dateTime()
   declare dateExpiration: DateTime | undefined | null
+
+  @column()
+  declare slug: string
 
   @column.dateTime()
   declare dateBegin: DateTime | undefined | null

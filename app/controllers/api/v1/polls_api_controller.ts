@@ -11,12 +11,12 @@ export interface ParamsPoll {
 
 @inject()
 export default class PollsAPIController {
-  public constructor(
+  constructor(
     private readonly pollService: PollsService,
     private readonly imageService: ImageService
   ) {}
 
-  public async store({ request, response }: HttpContext) {
+  async store({ request, response }: HttpContext) {
     const data: PollInterface = request.only(['title', 'description', 'banner', 'options'])
 
     const deviceIdOwner = request.input('deviceId') || request.ip()
@@ -132,5 +132,23 @@ export default class PollsAPIController {
       message: 'Polls retrieved successfully',
       polls,
     })
+  }
+
+  async vote({ params, request, response }: HttpContext) {
+    const deviceId = request.header('X-Device-Id') || request.ip()
+
+    try {
+      const result = await this.pollService.vote({
+        pollId: params.id,
+        optionId: params.optionId,
+        deviceId,
+      })
+
+      return response.json(result)
+    } catch (error) {
+      return response.status(400).json({
+        message: error.message,
+      })
+    }
   }
 }

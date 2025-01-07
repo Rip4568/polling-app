@@ -9,7 +9,7 @@ export default class extends BaseSchema {
       table.string('device_id_owner')
       table.string('title').notNullable()
       table.string('description').nullable()
-      table.string('slug').notNullable()
+      table.string('slug').notNullable().unique()
       table.string('banner').nullable()
       table.boolean('is_active').defaultTo(true)
       table.boolean('multiple_choices_avaliable').defaultTo(false)

@@ -1,0 +1,26 @@
+@layout.main({ title: poll.title })
+  <main class="container mx-auto p-4">
+    <div class="bg-secondary-dark rounded-lg p-6">
+      <h1 class="text-2xl font-bold mb-4">{{ poll.title }}</h1>
+      <p class="text-gray-300 mb-6">{{ poll.description }}</p>
+      
+      <div class="space-y-4" id="options-container">
+        @each(option in poll.options)
+          <div class="flex items-center p-4 bg-gray-700 rounded-lg"
+               hx-post="{{ route('api.v1.polls.vote', { id: poll.id, optionId: option.id }) }}"
+               hx-trigger="click"
+               hx-swap="outerHTML"
+               hx-headers='{"X-Device-Id": navigator.userAgent}'>
+            <div class="flex-grow">
+              <h3 class="font-medium">{{ option.title }}</h3>
+              <div class="w-full bg-gray-600 rounded-full h-2.5">
+                <div class="bg-blue-500 h-2.5 rounded-full" style="width: {{ option.percentage }}%"></div>
+              </div>
+              <span class="text-sm text-gray-400">{{ option.votes }} votes</span>
+            </div>
+          </div>
+        @end
+      </div>
+    </div>
+  </main>
+@end

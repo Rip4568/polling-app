@@ -11,6 +11,9 @@ export default class Option extends BaseModel {
   @column()
   declare title: string
 
+  @column()
+  declare pollId: number
+
   @belongsTo(() => Image)
   declare icon: BelongsTo<typeof Image>
 

@@ -1,6 +1,9 @@
 //import { typeInferValidatorType } from '@vinejs/vine';
+import Option from '#models/option'
 import Poll from '#models/poll'
 import { DateTime } from 'luxon'
+import Database from '@adonisjs/lucid/services/db'
+import Choice from '#models/choice'
 
 interface CreatePollData {
   title: string
@@ -11,53 +14,55 @@ interface CreatePollData {
   deviceIdOwner: string
 }
 
-interface UpdatePollData {
-  title?: string
-  description?: string | null
-  banner?: string | null
-  dateExpiration?: DateTime | null
-  dateBegin?: DateTime | null
-  deviceIdOwner?: string
-  options?: { title: string }[]
+interface UpdatePollData extends Partial<CreatePollData> {}
+
+interface VoteData {
+  pollId: number
+  optionId: number
+  deviceId: string
 }
 
 export default class PollsService {
-  /**
-   * Converte uma string, DateTime, null ou undefined para DateTime ou null.
-   *
-   * @param date - A data a ser convertida. Pode ser uma string ISO, um objeto DateTime, null ou undefined.
-   * @returns Um objeto DateTime se a conversão for bem-sucedida, ou null caso contrário.
-   */
-  private toDateTime(date: string | DateTime | null | undefined): DateTime | null {
-    if (date instanceof DateTime) return date
-    if (typeof date === 'string') return DateTime.fromISO(date)
-    return null
-  }
-  public async all(): Promise<Poll[]> {
+  async all(): Promise<Poll[]> {
     return await Poll.all()
   }
 
-  public async paginatePolls(page: number, perPage: number) {
+  async paginatePolls(page: number, perPage: number) {
     const polls = await Poll.query().paginate(page, perPage)
     return polls
   }
 
-  public async create(data: CreatePollData): Promise<Poll> {
-    const poll = await Poll.create({
-      title: data.title,
-      description: data.description,
-      //! caso utilize o SQLite, o dateBegin e dateExpiration não podem ser null e tipo Datetime ou date, so aceita string
-      //? dateBegin: data.dateBegin ? data.dateBegin.toSQL() : DateTime.now().toSQL(),
-      dateBegin: data.dateBegin ? data.dateBegin : DateTime.now(),
-      dateExpiration: data.dateExpiration ? data.dateExpiration : DateTime.now().plus({ days: 7 }),
-      deviceIdOwner: data.deviceIdOwner,
-    })
+  async create(data: CreatePollData): Promise<Poll> {
+    const trx = await Database.transaction()
+    try {
+      const poll = await Poll.create({
+        title: data.title,
+        description: data.description,
+        dateBegin: data.dateBegin ? data.dateBegin : DateTime.now(),
+        dateExpiration: data.dateExpiration
+          ? data.dateExpiration
+          : DateTime.now().plus({ days: 7 }),
+        deviceIdOwner: data.deviceIdOwner,
+        slug: data.title.toLowerCase().replace(/\s+/g, '-'),
+      })
 
-    await poll.related('options').createMany(data.options)
-    return poll.refresh()
+      if (data.options && data.options.length > 0) {
+        const optionsData = data.options.map((option) => ({
+          title: option.title,
+          pollId: poll.id,
+        }))
+        await Option.createMany(optionsData)
+      }
+
+      await trx.commit()
+      await poll.load('options')
+      return poll
+    } catch (error) {
+      await trx.rollback()
+      throw new Error(`Error creating poll: ${error.message}`)
+    }
   }
-
-  public async getBy(
+  async getBy(
     id?: number,
     title?: string,
     description?: string,
@@ -84,11 +89,11 @@ export default class PollsService {
     return await query.first()
   }
 
-  public async find(id: number): Promise<Poll | null> {
+  async find(id: number): Promise<Poll | null> {
     return await Poll.find(id)
   }
 
-  public async update(pollId: number, pollDto: Partial<UpdatePollData>): Promise<Poll> {
+  async update(pollId: number, pollDto: Partial<UpdatePollData>): Promise<Poll> {
     const poll = await this.getBy(pollId)
     if (!poll) {
       throw new Error('Poll not found')
@@ -96,5 +101,44 @@ export default class PollsService {
     poll.merge(pollDto)
     const pollUpdated = await poll.save()
     return pollUpdated
+  }
+
+  async vote({ pollId, optionId, deviceId }: VoteData) {
+    const existingVote = await Choice.query()
+      .where('ip_device', deviceId)
+      .whereHas('option', (query) => {
+        query.where('poll_id', pollId)
+      })
+      .first()
+
+    if (existingVote) {
+      throw new Error('You have already voted in this poll')
+    }
+
+    const trx = await Database.transaction()
+
+    try {
+      await Choice.create(
+        {
+          optionId,
+          ipDevice: deviceId,
+        },
+        { client: trx }
+      )
+
+      await trx.commit()
+
+      const poll = await Poll.query()
+        .where('id', pollId)
+        .preload('options', (query) => {
+          query.withCount('choices')
+        })
+        .firstOrFail()
+
+      return poll
+    } catch (error) {
+      await trx.rollback()
+      throw error
+    }
   }
 }

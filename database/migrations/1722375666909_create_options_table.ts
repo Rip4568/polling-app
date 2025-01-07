@@ -9,8 +9,7 @@ export default class extends BaseSchema {
       table.string('title')
       table.string('description').nullable()
       table.string('icon').nullable()
-      table.integer('poll_id')
-      table.foreign('poll_id').references('polls.id')
+      table.integer('poll_id').unsigned().references('id').inTable('polls').onDelete('CASCADE')
 
       table.timestamp('created_at')
       table.timestamp('updated_at')
